@@ -1,11 +1,19 @@
-import { redirect } from "next/navigation";
-import fs from "fs";
-import path from "path";
+"use client";
 
-export const dynamic = "force-dynamic";
+import { useEffect } from "react";
 
 export default function Home() {
-  const configPath = path.join(process.cwd(), "data", "config.json");
-  const config = JSON.parse(fs.readFileSync(configPath, "utf-8"));
-  redirect(config.redirectUrl);
+  useEffect(() => {
+    fetch("/api/redirect")
+      .then((r) => r.json())
+      .then((data) => {
+        window.location.href = data.redirectUrl;
+      });
+  }, []);
+
+  return (
+    <div className="flex items-center justify-center h-screen bg-gray-950 text-white text-xl">
+      جاري التحويل...
+    </div>
+  );
 }
