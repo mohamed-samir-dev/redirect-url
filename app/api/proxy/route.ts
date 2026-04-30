@@ -1,21 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
-import fs from "fs";
-import path from "path";
+import { getDb } from "@/lib/mongo";
 
-const configPath = path.join(process.cwd(), "data", "config.json");
-
-function getTargetUrl(): string {
-  const data = JSON.parse(fs.readFileSync(configPath, "utf-8"));
-  return data.redirectUrl;
+async function getTargetUrl(): Promise<string> {
+  const db = await getDb();
+  const config = await db.collection("config").findOne({ _id: "redirect" as never });
+  return config?.redirectUrl || "https://example.com";
 }
 
 export async function GET(req: NextRequest) {
-  const targetBase = getTargetUrl();
+  const targetBase = await getTargetUrl();
   const { searchParams } = new URL(req.url);
   const proxyPath = searchParams.get("path") || "/";
 
   const targetUrl = new URL(proxyPath, targetBase);
-  // نقل الـ query params الأصلية
   searchParams.forEach((value, key) => {
     if (key !== "path") targetUrl.searchParams.set(key, value);
   });
@@ -32,13 +29,11 @@ export async function GET(req: NextRequest) {
 
     const contentType = response.headers.get("content-type") || "";
 
-    // لو مش HTML، رجعه زي ما هو (CSS, JS, images, fonts...)
     if (!contentType.includes("text/html")) {
       const body = await response.arrayBuffer();
       const headers = new Headers();
       headers.set("content-type", contentType);
       headers.set("access-control-allow-origin", "*");
-      // لو CSS نعدل الروابط جواه
       if (contentType.includes("text/css")) {
         let css = new TextDecoder().decode(body);
         css = rewriteUrls(css, targetBase);
@@ -47,7 +42,6 @@ export async function GET(req: NextRequest) {
       return new NextResponse(body, { headers });
     }
 
-    // لو HTML، نعدل الروابط
     let html = await response.text();
     html = rewriteHtml(html, targetBase);
 
@@ -67,19 +61,16 @@ function rewriteHtml(html: string, targetBase: string): string {
   const base = new URL(targetBase);
   const origin = base.origin;
 
-  // نعدل الروابط المطلقة للموقع الهدف → تمر عبر البروكسي
   html = html.replace(
     new RegExp(`(href|src|action)=["'](${escapeRegex(origin)})(/[^"']*)["']`, "gi"),
     (_, attr, _origin, path) => `${attr}="/api/proxy?path=${encodeURIComponent(path)}"`
   );
 
-  // نعدل الروابط النسبية اللي بتبدأ بـ /
   html = html.replace(
     /(href|src|action)=["']\/(?!api\/proxy)([^"']*)["']/gi,
     (_, attr, path) => `${attr}="/api/proxy?path=${encodeURIComponent("/" + path)}"`
   );
 
-  // نضيف base tag عشان الروابط النسبية التانية
   html = html.replace(
     /<head([^>]*)>/i,
     `<head$1><base href="${origin}/">`
