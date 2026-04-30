@@ -73,9 +73,6 @@ async function proxyToTarget(req: NextRequest, targetBase: string): Promise<Next
     // نحول روابط التنقل بس عشان تفضل على موقعنا
     html = html.replaceAll(`href="${targetOrigin}/`, `href="/`);
     html = html.replaceAll(`href='${targetOrigin}/`, `href='/`);
-    // نخلي ملفات _next/ تشير للموقع الهدف مباشرة عشان المتصفح يجيبها من هناك
-    html = html.replaceAll(`"/_next/`, `"${targetOrigin}/_next/`);
-    html = html.replaceAll(`'/_next/`, `'${targetOrigin}/_next/`);
     return new NextResponse(html, {
       status: proxyRes.status,
       headers: { "content-type": "text/html; charset=utf-8" },
@@ -108,5 +105,5 @@ export async function middleware(req: NextRequest) {
 
 export const config = {
   // نمسك كل الطلبات ما عدا لوحة التحكم و favicon
-  matcher: ["/((?!panel|favicon.ico).*)"],
+  matcher: ["/((?!panel|_next|favicon.ico).*)"],
 };
