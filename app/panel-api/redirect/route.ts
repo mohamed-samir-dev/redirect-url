@@ -4,7 +4,7 @@ import { getDb } from "@/lib/mongo";
 async function getConfig() {
   const db = await getDb();
   const config = await db.collection("config").findOne({ _id: "redirect" as never });
-  return config || { redirectUrl: "https://example.com", label: "" };
+  return config || { redirectUrl: "https://basmat-hatify-store.com", label: "" };
 }
 
 export async function GET() {

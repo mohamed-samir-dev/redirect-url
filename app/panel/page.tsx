@@ -13,7 +13,7 @@ export default function AdminPage() {
 
   useEffect(() => {
     if (sessionStorage.getItem("admin") === "true") setIsAdmin(true);
-    fetch("/api/redirect")
+    fetch("/panel-api/redirect")
       .then((r) => r.json())
       .then((data) => {
         setRedirectUrl(data.redirectUrl);
@@ -34,7 +34,7 @@ export default function AdminPage() {
 
   async function handleSave() {
     setSaved(false);
-    await fetch("/api/redirect", {
+    await fetch("/panel-api/redirect", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ redirectUrl, label }),
