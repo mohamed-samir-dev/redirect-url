@@ -90,9 +90,22 @@ async function proxyToTarget(req: NextRequest, targetBase: string): Promise<Next
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // لوحة التحكم + ملفات موقعنا الستاتيك
+  // لوحة التحكم
   if (pathname.startsWith("/panel")) {
     return NextResponse.next();
+  }
+
+  // ملفات _next/ → نشوف لو جاية من صفحة panel أو ملفات السيرفر المحلي
+  if (pathname.startsWith("/_next/")) {
+    const referer = req.headers.get("referer") || "";
+    try {
+      const refPath = referer ? new URL(referer).pathname : "";
+      if (refPath.startsWith("/panel")) return NextResponse.next();
+    } catch {}
+    // ملفات turbopack/dev المحلية فيها كلمات مميزة
+    if (pathname.includes("node_modules_") || pathname.includes("%5B") || pathname.includes("app_panel") || pathname.includes("app_layout")) {
+      return NextResponse.next();
+    }
   }
 
   try {
@@ -105,5 +118,5 @@ export async function middleware(req: NextRequest) {
 
 export const config = {
   // نمسك كل الطلبات ما عدا لوحة التحكم و favicon
-  matcher: ["/((?!panel|_next|favicon.ico).*)"],
+  matcher: ["/((?!panel|favicon.ico).*)"],
 };
